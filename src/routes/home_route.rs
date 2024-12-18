@@ -1,19 +1,24 @@
 use super::handlers;
 use actix_web::web;
 
-/// Configure the routes for the home route.
 ///
-/// The home route is responsible for providing the homepage of the application.
-/// It provides two endpoints: `/` and `/test`.
+/// Registers routes for the "home" scope.
 ///
-/// The `/` endpoint returns a simple "Hello, Rustacean!" message.
+/// The "home" scope includes the following routes:
 ///
-/// The `/test` endpoint returns a simple "Hello, Rustacean! test" message.
+/// - `GET /home`: Returns a message with a Rust mascot.
+/// - `GET /`: Returns a message with a Rust mascot.
+/// - `GET /test`: Returns a message with a Rust mascot.
 ///
-/// This function is a part of the `actix_web` framework, and is used to configure
-/// the application's routes.
+/// # Parameters
+///
+/// * `config`: An instance of `actix_web::web::ServiceConfig` to configure.
+///
+/// # Returns
+///
+/// * None
 pub fn config(config: &mut web::ServiceConfig) {
-    config
+    config.service(web::scope("/home").service(handlers::home_handler::index))
         .service(handlers::home_handler::index)
         .service(handlers::home_handler::test);
 }
