@@ -28,6 +28,7 @@ async fn main() -> std::io::Result<()> {
                 db: db.clone(),
             }))
             .configure(routes::home_route::config)
+            .configure(routes::auth_route::config)
     })
     .bind((_address, _port))?
     .run()
