@@ -1,4 +1,6 @@
-use actix_web::{middleware::Logger, App, HttpServer};
+use actix_web::{middleware::Logger, web, App, HttpServer};
+use migration::{Migrator, MigratorTrait};
+use sea_orm::{Database, DatabaseConnection};
 mod routes;
 mod utils;
 
@@ -10,14 +12,21 @@ async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
     env_logger::init();
 
-    let (_address, _port) = (
+    let (_address, _port, _db) = (
         utils::constants::address.clone(),
         utils::constants::port.clone(),
+        utils::constants::db_url.clone(),
     );
 
-    HttpServer::new(|| {
+    let db: DatabaseConnection = Database::connect(_db).await.unwrap();
+    Migrator::up(&db, None).await.unwrap();
+
+    HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
+            .app_data(web::Data::new(utils::app_state::AppState {
+                db: db.clone(),
+            }))
             .configure(routes::home_route::config)
     })
     .bind((_address, _port))?
