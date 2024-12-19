@@ -1,25 +1,24 @@
-use std::fmt::Display;
 use actix_web::{body::BoxBody, http::StatusCode, web, HttpResponse, Responder, ResponseError};
-
+use std::fmt::Display;
 
 #[derive(Debug)]
-pub struct ApiResponse{
+pub struct ApiResponse {
     pub status_code: u16,
     pub body: String,
-    response_code: StatusCode
+    response_code: StatusCode,
 }
 
-impl ApiResponse{
+impl ApiResponse {
     pub fn new(status_code: u16, body: String) -> Self {
-        ApiResponse{
+        ApiResponse {
             status_code,
             body,
-            response_code: StatusCode::from_u16(status_code).unwrap()
+            response_code: StatusCode::from_u16(status_code).unwrap(),
         }
     }
 }
 
-impl Responder for ApiResponse{
+impl Responder for ApiResponse {
     type Body = BoxBody;
 
     fn respond_to(self, req: &actix_web::HttpRequest) -> actix_web::HttpResponse<Self::Body> {
@@ -29,9 +28,13 @@ impl Responder for ApiResponse{
     }
 }
 
-impl Display for ApiResponse{
+impl Display for ApiResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f,"Error: {} \n Status Code: {}",self.body,self.status_code)
+        write!(
+            f,
+            "Error: {} \n Status Code: {}",
+            self.body, self.status_code
+        )
     }
 }
 

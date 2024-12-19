@@ -1,3 +1,4 @@
+use crate::utils::jwt::encode_token;
 use crate::utils::{api_response, app_state};
 use actix_web::{post, web};
 use entity::user;
@@ -96,6 +97,8 @@ pub async fn login(
     if user.is_none() {
         return api_response::ApiResponse::new(401, "user not found".to_string());
     }
+    let user_data = user.unwrap();
+    let token = encode_token(user_data.email, user_data.id).unwrap();
 
-    api_response::ApiResponse::new(200, user.unwrap().name.to_string())
+    api_response::ApiResponse::new(200, format!("{{'token': '{}'}}", token))
 }

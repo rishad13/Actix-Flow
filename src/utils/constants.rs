@@ -6,6 +6,18 @@ lazy_static! {
     pub static ref address: String = set_address();
     pub static ref port: u16 = set_port();
     pub static ref db_url: String = set_db_url();
+    pub static ref jwt_secret: String = set_jwt_secret();
+}
+
+/// Retrieves the JWT secret from the environment variables.
+///
+/// Loads environment variables from a `.env` file, if available, and
+/// attempts to fetch the value of the `jwtSecret` variable. If the
+/// variable is not set, the function will panic.
+
+fn set_jwt_secret() -> String {
+    dotenv::dotenv().ok();
+    env::var("jwtSecret").unwrap()
 }
 
 /// Retrieves the database connection URL from the environment variables.
