@@ -1,11 +1,10 @@
-use crate::utils::api_response::ApiResponse; // Assuming your ApiResponse is here
+use crate::utils::api_response::{self};
 use crate::utils::jwt::decode_jwt;
 use actix_web::body::MessageBody;
 use actix_web::middleware::Next;
 use actix_web::HttpMessage;
 use actix_web::{
     dev::{ServiceRequest, ServiceResponse},
-    error::{ErrorInternalServerError, ErrorUnauthorized},
     http::header::AUTHORIZATION,
     Error,
 }; // Assuming decode_jwt is your JWT decoding function
@@ -18,28 +17,32 @@ pub async fn check_auth_middleware(
     let auth_header = req.headers().get(AUTHORIZATION);
     if auth_header.is_none() {
         // Return 401 Unauthorized if no Authorization header is found
-        return Err(ErrorUnauthorized(ApiResponse::new(
+        return Err(Error::from(api_response::ApiResponse::new(
             401,
             "Unauthorized".to_string(),
         )));
     }
 
     // Extract and decode the token
-    // Extract and decode the token
-    let token = match auth_header.unwrap().to_str() {
-        Ok(t) => t.to_string(), // Convert &str to String
-        Err(_) => {
-            return Err(ErrorUnauthorized(ApiResponse::new(
-                401,
-                "Invalid Authorization header".to_string(),
-            )));
-        }
-    };
-
+    let token = auth_header
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .replace("Bearer ", "");
     // Validate the token
-    let claim = decode_jwt(token).unwrap();
+    let claim = decode_jwt(&token.to_string()).map_err(|_| {
+        Error::from(api_response::ApiResponse::new(
+            401,
+            "Unauthorized".to_string(),
+        ))
+    });
 
-    next.call(req)
-        .await
-        .map_err(|e: Error| ErrorInternalServerError(ApiResponse::new(500, e.to_string())))
+    req.extensions_mut().insert(claim.unwrap().claims);
+
+    next.call(req).await.map_err(|e: Error| {
+        Error::from(api_response::ApiResponse::new(
+            500,
+            e.to_string().to_string(),
+        ))
+    })
 }

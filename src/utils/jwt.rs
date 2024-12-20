@@ -1,16 +1,37 @@
+use std::future;
+
 use super::constants;
+use actix_web::{FromRequest, HttpMessage};
 use chrono::{Duration, Utc};
-use jsonwebtoken::{
-    decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation,
-};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Claims {
     pub exp: usize,
     pub iat: usize,
     pub email: String,
     pub id: i32,
+}
+
+impl FromRequest for Claims {
+    type Error = actix_web::Error;
+    type Future = future::Ready<Result<Claims, Self::Error>>;
+
+    /*************  ✨ Codeium Command ⭐  *************/
+    /// Extracts the JWT token from the Authorization header and decodes it into a `Claims`
+    /// object. If no token is found or the token is invalid, an `ErrorBadRequest` is
+    /// returned. If the token is valid, the `Claims` object is returned.
+    /******  01537e0a-4895-414f-925a-de753a07998a  *******/
+    fn from_request(
+        req: &actix_web::HttpRequest,
+        payload: &mut actix_web::dev::Payload,
+    ) -> std::future::Ready<Result<Claims, actix_web::Error>> {
+        match req.extensions().get::<Claims>() {
+            Some(claims) => future::ready(Ok(claims.clone())),
+            None => future::ready(Err(actix_web::error::ErrorBadRequest("Bad claim"))),
+        }
+    }
 }
 
 /// Encodes a JWT token with the given email and id.
@@ -44,7 +65,7 @@ pub fn encode_token(email: String, id: i32) -> Result<String, jsonwebtoken::erro
 /// # Errors
 ///
 /// If decoding the token fails, an `Error` is returned.
-pub fn decode_jwt(token: String) -> Result<TokenData<Claims>, jsonwebtoken::errors::Error> {
+pub fn decode_jwt(token: &String) -> Result<TokenData<Claims>, jsonwebtoken::errors::Error> {
     let secret = constants::jwt_secret.clone();
     let claim_data: Result<TokenData<Claims>, jsonwebtoken::errors::Error> = decode(
         &token,

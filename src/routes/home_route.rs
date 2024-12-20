@@ -10,7 +10,5 @@ pub fn config(config: &mut web::ServiceConfig) {
     config.service(
         web::scope("/home",)
             .service(handlers::home_handler::index)
-            .service(handlers::home_handler::index)
-            .service(handlers::home_handler::test),
     );
 }
