@@ -1,8 +1,7 @@
-use std::{error::Error, fmt::Display};
-
 use actix_web::{middleware::Logger, web, App, HttpServer};
 use migration::{Migrator, MigratorTrait};
 use sea_orm::{Database, DatabaseConnection};
+use std::{error::Error, fmt::Display};
 mod routes;
 mod utils;
 
@@ -53,8 +52,8 @@ async fn main() -> Result<(), MainError> {
     let db: DatabaseConnection = Database::connect(_db).await.map_err(|_| MainError {
         message: "Database connection error".to_string(),
     })?;
-    Migrator::up(&db, None).await.map_err(|_| MainError {
-        message: "Database migration error".to_string(),
+    Migrator::up(&db, None).await.map_err(|e| MainError {
+        message: format!("Database migration error: {}", e),
     })?;
 
     HttpServer::new(move || {
