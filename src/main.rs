@@ -29,7 +29,6 @@ impl Error for MainError {
     ///
     /// This method delegates to the `source` method to provide compatibility
     /// with older error APIs that use `cause`.
-
     fn cause(&self) -> Option<&dyn Error> {
         self.source()
     }
@@ -56,6 +55,8 @@ async fn main() -> Result<(), MainError> {
         message: format!("Database migration error: {}", e),
     })?;
 
+    println!("Server running",);
+
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
@@ -65,6 +66,7 @@ async fn main() -> Result<(), MainError> {
             .configure(routes::home_route::config)
             .configure(routes::auth_route::config)
             .configure(routes::user_route::config)
+            .configure(routes::post_route::config)
     })
     .bind((_address, _port))
     .map_err(|_| MainError {

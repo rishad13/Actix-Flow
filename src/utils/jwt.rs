@@ -18,15 +18,12 @@ impl FromRequest for Claims {
     type Error = actix_web::Error;
     type Future = future::Ready<Result<Claims, Self::Error>>;
 
-    /*************  ✨ Codeium Command ⭐  *************/
-    /// Extracts the JWT token from the Authorization header and decodes it into a `Claims`
-    /// object. If no token is found or the token is invalid, an `ErrorBadRequest` is
-    /// returned. If the token is valid, the `Claims` object is returned.
-    /******  01537e0a-4895-414f-925a-de753a07998a  *******/
+    /// Extracts the Claims from the request extensions if it exists, otherwise returns 400 BadRequest.
     fn from_request(
         req: &actix_web::HttpRequest,
         payload: &mut actix_web::dev::Payload,
     ) -> std::future::Ready<Result<Claims, actix_web::Error>> {
+        let _ = payload;
         match req.extensions().get::<Claims>() {
             Some(claims) => future::ready(Ok(claims.clone())),
             None => future::ready(Err(actix_web::error::ErrorBadRequest("Bad claim"))),

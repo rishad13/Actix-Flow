@@ -3,6 +3,9 @@
         "actix",
         "chrono",
         "dotenv",
-        "jsonwebtoken"
+        "jsonwebtoken",
+        "rustls",
+        "serde",
+        "sqlx"
     ]
 }
