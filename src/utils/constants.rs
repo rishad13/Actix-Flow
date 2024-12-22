@@ -7,6 +7,15 @@ lazy_static! {
     pub static ref port: u16 = set_port();
     pub static ref db_url: String = set_db_url();
     pub static ref jwt_secret: String = set_jwt_secret();
+    pub static ref MaxFileSize: u64 = set_max_file_size();
+}
+
+fn set_max_file_size() -> u64 {
+    dotenv::dotenv().ok();
+    env::var("MAX_FILE_SIZE")
+        .unwrap_or("5242880".to_string())
+        .parse()
+        .expect("MAX_FILE_SIZE must be a number")
 }
 
 /// Retrieves the JWT secret from the environment variables.

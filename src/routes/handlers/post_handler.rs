@@ -1,16 +1,22 @@
-use crate::utils::api_response;
+use std::path::PathBuf;
+
+use crate::utils::{api_response, constants};
 use crate::utils::{api_response::ApiResponse, app_state, jwt::Claims};
+use actix_multipart::form::tempfile::TempFile;
+use actix_multipart::form::text::Text;
+use actix_multipart::form::MultipartForm;
 use actix_web::{get, post, web};
-use chrono::NaiveDateTime;
-use sea_orm::ActiveModelTrait;
+use chrono::{NaiveDateTime, Utc};
+use sea_orm::{ActiveModelTrait, TransactionTrait};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Set};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Deserialize, Serialize)]
+#[derive(MultipartForm)]
 pub struct CreatePost {
-    title: String,
-    text: String,
+    title: Text<String>,
+    text: Text<String>,
+    file: TempFile,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -50,8 +56,37 @@ struct UserModel {
 pub async fn create_post(
     app_state: web::Data<app_state::AppState>,
     claim: Claims,
-    post_model: web::Json<CreatePost>,
+    post_model: MultipartForm<CreatePost>,
 ) -> Result<ApiResponse, ApiResponse> {
+    let file_name = post_model
+        .file
+        .file_name
+        .clone()
+        .unwrap_or("null".to_string())
+        .to_owned();
+    let max_file_size = (constants::MaxFileSize).clone();
+
+    match &file_name[file_name.len() - 4..] {
+        ".png" | ".jpg" | ".jpeg" => {}
+        _ => return Err(ApiResponse::new(400, "Invalid file format".to_owned())),
+    }
+
+    match post_model.file.size {
+        0 => {
+            return Err(ApiResponse::new(400, "File is empty".to_owned()));
+        }
+        length if length > max_file_size as usize => {
+            return Err(ApiResponse::new(400, "File is too large".to_owned()));
+        }
+        _ => {}
+    }
+
+    let txn = app_state
+        .db
+        .begin()
+        .await
+        .map_err(|e| ApiResponse::new(500, format!("Failed to create transaction: {}", e)))?;
+
     let post_entity = entity::post::ActiveModel {
         title: Set(post_model.title.clone()),
         text: Set(post_model.text.clone()),
@@ -62,12 +97,50 @@ pub async fn create_post(
         ..Default::default()
     };
 
-    match post_entity.insert(&app_state.db).await {
-        Ok(_) => Ok(ApiResponse::new(200, "success".to_owned())),
-        Err(e) => Err(ApiResponse::new(
-            500,
-            format!("Failed to create post: {}", e),
-        )),
+    let mut created_entity = post_entity
+        .save(&txn)
+        .await
+        .map_err(|e| ApiResponse::new(500, format!("Failed to create post: {}", e)))?;
+    let temp_file = post_model.file.file.path();
+
+    let file_name = post_model
+        .file
+        .file_name
+        .as_ref()
+        .map(|s| s.to_owned())
+        .unwrap_or("null".to_string());
+
+    let timestamp: i64 = Utc::now().timestamp();
+
+    let mut file_path = PathBuf::from("./public");
+    let new_file_name = format!("{}-{}", timestamp, file_name);
+    file_path.push(&new_file_name);
+
+    match std::fs::copy(temp_file, file_path) {
+        Ok(_) => {
+            created_entity.image = Set(new_file_name.clone());
+            created_entity
+                .save(&txn)
+                .await
+                .map_err(|e| ApiResponse::new(500, format!("Failed to update post: {}", e)))?;
+
+            txn.commit().await.map_err(|e| {
+                ApiResponse::new(500, format!("Failed to commit transaction: {}", e))
+            })?;
+
+            std::fs::remove_file(temp_file).unwrap_or_default();
+
+            Ok(ApiResponse::new(
+                200,
+                "Post created successfully".to_string(),
+            ))
+        }
+        Err(e) => {
+            txn.rollback().await.map_err(|e| {
+                ApiResponse::new(500, format!("Failed to rollback transaction: {}", e))
+            })?;
+            return Err(ApiResponse::new(500, format!("internal error: {}", e)));
+        }
     }
 }
 
