@@ -20,6 +20,8 @@ pub async fn check_auth_middleware(
         return Err(Error::from(api_response::ApiResponse::new(
             401,
             "Unauthorized".to_string(),
+            "Error".to_string(),
+            false,
         )));
     }
 
@@ -34,6 +36,8 @@ pub async fn check_auth_middleware(
         Error::from(api_response::ApiResponse::new(
             401,
             "Unauthorized".to_string(),
+            "Error".to_string(),
+            false,
         ))
     });
 
@@ -43,6 +47,8 @@ pub async fn check_auth_middleware(
         Error::from(api_response::ApiResponse::new(
             500,
             e.to_string().to_string(),
+            "Error".to_string(),
+            false,
         ))
     })
 }

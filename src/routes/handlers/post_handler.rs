@@ -68,15 +68,15 @@ pub async fn create_post(
 
     match &file_name[file_name.len() - 4..] {
         ".png" | ".jpg" | ".jpeg" => {}
-        _ => return Err(ApiResponse::new(400, "Invalid file format".to_owned())),
+        _ => return Err(ApiResponse::new(400, "Invalid file format".to_owned(),"Invalid file format".to_string(),false)),
     }
 
     match post_model.file.size {
         0 => {
-            return Err(ApiResponse::new(400, "File is empty".to_owned()));
+            return Err(ApiResponse::new(400, "File is empty".to_owned(),"Error".to_string(),false));
         }
         length if length > max_file_size as usize => {
-            return Err(ApiResponse::new(400, "File is too large".to_owned()));
+            return Err(ApiResponse::new(400, "File is too large".to_owned(),"Error".to_string(),false));
         }
         _ => {}
     }
@@ -85,7 +85,7 @@ pub async fn create_post(
         .db
         .begin()
         .await
-        .map_err(|e| ApiResponse::new(500, format!("Failed to create transaction: {}", e)))?;
+        .map_err(|e| ApiResponse::new(500, format!("Failed to create transaction: {}", e),"Error".to_string(),false))?;
 
     let post_entity = entity::post::ActiveModel {
         title: Set(post_model.title.clone()),
@@ -100,7 +100,7 @@ pub async fn create_post(
     let mut created_entity = post_entity
         .save(&txn)
         .await
-        .map_err(|e| ApiResponse::new(500, format!("Failed to create post: {}", e)))?;
+        .map_err(|e| ApiResponse::new(500, format!("Failed to create post: {}", e),"Error".to_string(),false))?;
     let temp_file = post_model.file.file.path();
 
     let file_name = post_model
@@ -122,24 +122,24 @@ pub async fn create_post(
             created_entity
                 .save(&txn)
                 .await
-                .map_err(|e| ApiResponse::new(500, format!("Failed to update post: {}", e)))?;
+                .map_err(|e| ApiResponse::new(500, format!("Failed to update post: {}", e),"Error".to_string(),false))?;
 
             txn.commit().await.map_err(|e| {
-                ApiResponse::new(500, format!("Failed to commit transaction: {}", e))
+                ApiResponse::new(500, format!("Failed to commit transaction: {}", e),"Error".to_string(),false)
             })?;
 
             std::fs::remove_file(temp_file).unwrap_or_default();
 
             Ok(ApiResponse::new(
                 200,
-                "Post created successfully".to_string(),
+                "Post created successfully".to_string(),"success".to_string(),true
             ))
         }
         Err(e) => {
             txn.rollback().await.map_err(|e| {
-                ApiResponse::new(500, format!("Failed to rollback transaction: {}", e))
+                ApiResponse::new(500, format!("Failed to rollback transaction: {}", e),"Error".to_string(),false)
             })?;
-            return Err(ApiResponse::new(500, format!("internal error: {}", e)));
+            return Err(ApiResponse::new(500, format!("internal error: {}", e),"Error".to_string(),false));
         }
     }
 }
@@ -182,7 +182,7 @@ pub async fn my_posts(
         .filter(entity::post::Column::UserId.eq(claim.id))
         .all(&app_state.db)
         .await
-        .map_err(|err| api_response::ApiResponse::new(500, err.to_string()))?
+        .map_err(|err| api_response::ApiResponse::new(500, err.to_string(),"Error".to_string(),false))?
         .into_iter()
         .map(|post| PostModel {
             id: post.id,
@@ -196,9 +196,9 @@ pub async fn my_posts(
         })
         .collect();
     let res_str = serde_json::to_string(&posts)
-        .map_err(|err| api_response::ApiResponse::new(500, err.to_string()))?;
+        .map_err(|err| api_response::ApiResponse::new(500, err.to_string(),"Error".to_string(),false))?;
 
-    Ok(api_response::ApiResponse::new(200, res_str.to_owned()))
+    Ok(api_response::ApiResponse::new(200, res_str.to_owned(),"success".to_string(),true))
 }
 
 /// Returns all posts in the database.
@@ -238,7 +238,7 @@ pub async fn all_posts(
     let posts: Vec<PostModel> = entity::post::Entity::find()
         .all(&app_state.db)
         .await
-        .map_err(|e| ApiResponse::new(500, e.to_string()))?
+        .map_err(|e| ApiResponse::new(500, e.to_string(),"Error".to_string(),false))?
         .into_iter()
         .map(|post| PostModel {
             id: post.id,
@@ -252,8 +252,8 @@ pub async fn all_posts(
         })
         .collect();
     let res_str =
-        serde_json::to_string(&posts).map_err(|e| ApiResponse::new(500, e.to_string()))?;
-    Ok(ApiResponse::new(200, res_str.to_owned()))
+        serde_json::to_string(&posts).map_err(|e| ApiResponse::new(500, e.to_string(),"Error".to_string(),false))?;
+    Ok(ApiResponse::new(200, res_str.to_owned(),"success".to_string(),true))
 }
 
 /// Retrieves a single post along with its associated user information from the database
@@ -303,7 +303,7 @@ pub async fn one_posts(
         .find_also_related(entity::user::Entity)
         .one(&app_state.db)
         .await
-        .map_err(|e| ApiResponse::new(500, e.to_string()))?
+        .map_err(|e| ApiResponse::new(500, e.to_string(),"Error".to_string(),false))?
         .map(|post| PostModel {
             id: post.0.id,
             title: post.0.title,
@@ -318,9 +318,9 @@ pub async fn one_posts(
                 email: user.email,
             }),
         })
-        .ok_or(ApiResponse::new(404, "post not found".to_string()))?;
+        .ok_or(ApiResponse::new(404, "post not found".to_string(),"Error".to_string(),false))?;
 
     let res_str =
-        serde_json::to_string(&posts).map_err(|e| ApiResponse::new(500, e.to_string()))?;
-    Ok(ApiResponse::new(200, res_str.to_owned()))
+        serde_json::to_string(&posts).map_err(|e| ApiResponse::new(500, e.to_string(),"Error".to_string(),false))?;
+    Ok(ApiResponse::new(200, res_str.to_owned(),"success".to_string(),true))
 }

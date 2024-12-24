@@ -3,5 +3,10 @@ use actix_web::{get, Responder};
 
 #[get("/")]
 async fn index() -> impl Responder {
-    api_response::ApiResponse::new(200, "hello rustacean! 🦀".to_string())
+    api_response::ApiResponse::new(
+        200,
+        "hello rustacean! 🦀".to_string(),
+        "hy".to_string(),
+        true,
+    )
 }

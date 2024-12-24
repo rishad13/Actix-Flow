@@ -1,18 +1,29 @@
 use actix_web::{body::BoxBody, http::StatusCode, web, HttpResponse, Responder, ResponseError};
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
 #[derive(Debug)]
 pub struct ApiResponse {
     pub status_code: u16,
     pub body: String,
+    pub message: String,
+    pub status: bool,
     response_code: StatusCode,
+}
+#[derive(Serialize, Deserialize)]
+struct ResponsesModel {
+    status: bool,
+    message: String,
+    body: String,
 }
 
 impl ApiResponse {
-    pub fn new(status_code: u16, body: String) -> Self {
+    pub fn new(status_code: u16, body: String, message: String, status: bool) -> Self {
         ApiResponse {
             status_code,
             body,
+            message,
+            status,
             response_code: StatusCode::from_u16(status_code).unwrap(),
         }
     }
@@ -23,7 +34,14 @@ impl Responder for ApiResponse {
 
     fn respond_to(self, req: &actix_web::HttpRequest) -> actix_web::HttpResponse<Self::Body> {
         let _ = req;
-        let body = BoxBody::new(web::BytesMut::from(self.body.as_bytes()));
+        let responses = ResponsesModel {
+            body: self.body,
+            message: self.message,
+            status: self.status,
+        };
+        let res_str = serde_json::to_string(&responses);
+        let body = BoxBody::new(web::BytesMut::from(res_str.unwrap().as_bytes()));
+
         HttpResponse::new(self.response_code).set_body(body)
     }
 }

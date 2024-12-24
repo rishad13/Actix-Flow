@@ -58,11 +58,20 @@ pub async fn register(
     }
     .insert(&app_state.db)
     .await
-    .map_err(|e| api_response::ApiResponse::new(500, e.to_string()))?;
+    .map_err(|e| {
+        api_response::ApiResponse::new(
+            500,
+            e.to_string(),
+            "Database error while registering user".to_string(),
+            false,
+        )
+    })?;
 
     Ok(api_response::ApiResponse::new(
         200,
         format!("{:?}", user_model.id),
+        "User successfully registered".to_string(),
+        true,
     ))
 }
 
@@ -99,16 +108,28 @@ pub async fn login(
         )
         .one(&app_state.db)
         .await
-        .map_err(|e| api_response::ApiResponse::new(500, e.to_string()))?
+        .map_err(|e| {
+            api_response::ApiResponse::new(
+                500,
+                e.to_string(),
+                "Database error while logging in".to_string(),
+                false,
+            )
+        })?
         .ok_or(api_response::ApiResponse::new(
             401,
             "User not found".to_string(),
+            "User not found".to_string(),
+            false,
         ))?;
-    let token = encode_token(user_data.email, user_data.id)
-        .map_err(|e| api_response::ApiResponse::new(500, e.to_string()))?;
+    let token = encode_token(user_data.email, user_data.id).map_err(|e| {
+        api_response::ApiResponse::new(500, e.to_string(), "error".to_string(), false)
+    })?;
 
     Ok(api_response::ApiResponse::new(
         200,
         format!("{{'token': '{}'}}", token),
+        "success".to_string(),
+        true,
     ))
 }

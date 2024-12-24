@@ -16,10 +16,10 @@ async fn user(
     let user_model = entity::user::Entity::find_by_id(claims_data.id)
         .one(&app_state.db)
         .await
-        .map_err(|e| api_response::ApiResponse::new(500, e.to_string()))?
+        .map_err(|e| api_response::ApiResponse::new(500, e.to_string(),"Error".to_string(),false))?
         .ok_or(api_response::ApiResponse::new(
             401,
-            "user not found".to_owned(),
+            "user not found".to_owned(),"Error".to_string(),false
         ))?;
     Ok(api_response::ApiResponse::new(
         200,
@@ -27,6 +27,8 @@ async fn user(
             "{{'name':'{}','email':'{}'}}",
             user_model.name, user_model.email
         ),
+        "Success".to_string(),
+        true,
     ))
 }
 
@@ -39,16 +41,16 @@ async fn update_user(
     let mut user_model = entity::user::Entity::find_by_id(claims_data.id)
         .one(&app_state.db)
         .await
-        .map_err(|e| api_response::ApiResponse::new(500, e.to_string()))?
+        .map_err(|e| api_response::ApiResponse::new(500, e.to_string(),"Error".to_string(),false))?
         .ok_or(api_response::ApiResponse::new(
             401,
-            "user not found".to_owned(),
+            "user not found".to_owned(),"Error".to_string(),false
         ))?
         .into_active_model();
     user_model.name = Set(update_user_json.name.clone());
     user_model
         .update(&app_state.db)
         .await
-        .map_err(|e| api_response::ApiResponse::new(500, e.to_string()))?;
-    Ok(api_response::ApiResponse::new(200, "success".to_string()))
+        .map_err(|e| api_response::ApiResponse::new(500, e.to_string(),"Error".to_string(),false))?;
+    Ok(api_response::ApiResponse::new(200, "success".to_string(),"Success".to_string(),true))
 }
